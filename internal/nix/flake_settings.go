@@ -40,7 +40,13 @@ func (f FlakeSettings) GetPackage(path string) (*Package, error) {
 		return nil, err
 	}
 
-	if !slices.Contains(f.PackageDetails.Ignore, pkg.Name) && pkg.CurrentVersion != nil {
+	// Don't look for updates for ignored packages. Additionally,
+	// some packages, things like darwin-help, darwin-manpages, etc
+	// don't have a version and can't be fetched from Nixpkgs (and therefor
+	// cannot be updated by the method this app uses)
+	// In that case, just skip them. If you're not seeing packages (that you know
+	// you have installed) in the output table, this could be why
+	if !slices.Contains(f.PackageDetails.Ignore, pkg.Name) && !pkg.isNonVersioned() {
 
 		lookupName := pkg.Name
 		overrideName, ok := f.PackageDetails.Overrides[pkg.Name]
@@ -61,9 +67,6 @@ func (f FlakeSettings) GetPackage(path string) (*Package, error) {
 		return pkg, nil
 	}
 
-	// We can have an instance where we don't want to return a full package, but there were
-	// no errors either... this is why original concept was called "VersionedPackage" because
-	// a package with no version would not be returned
 	return nil, nil
 }
 

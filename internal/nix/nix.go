@@ -3,6 +3,7 @@ package nix
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -25,6 +26,10 @@ type Package struct {
 	Name           string  `json:"name"`
 	CurrentVersion *string `json:"current_version"`
 	Update         *string
+}
+
+func (p Package) isNonVersioned() bool {
+	return p.CurrentVersion == nil || strings.TrimSpace(*p.CurrentVersion) == ""
 }
 
 type RunSummary struct {
@@ -104,9 +109,11 @@ func Run(flakeSettings GetsPackages, progressInitFn func(int) MarksProgress) (*R
  */
 func goGetPackages(paths []string, packageFn func(string) (*Package, error), progressMarker MarksProgress) ([]Package, error) {
 
-	packages := make([]Package, 0)
+	packages := make([]Package, 0, len(paths))
 	results := make(chan *Package)
-	errors := make(chan error)
+	// There's an off chance we fill in more (unexpected) errors than we can drain
+	// so buffer up to number of paths + 1
+	errs := make(chan error, len(paths)+1)
 
 	var wg sync.WaitGroup
 
@@ -116,36 +123,36 @@ func goGetPackages(paths []string, packageFn func(string) (*Package, error), pro
 			defer wg.Done()
 			pkg, err := packageFn(p)
 			if err != nil {
-				errors <- err
+				errs <- err
 				return
 			}
 			results <- pkg
+			if err := progressMarker.inc(1); err != nil {
+				errs <- err
+			}
 		}(path)
 	}
 
 	go func() {
 		wg.Wait()
-		if err := progressMarker.close(); err != nil {
-			errors <- err
-		}
 		close(results)
-		close(errors)
+		close(errs)
 	}()
 
 	for pkg := range results {
 		if pkg != nil {
 			packages = append(packages, *pkg)
 		}
-		// We count progress regardless
-		if err := progressMarker.inc(1); err != nil {
-			errors <- err
-		}
 	}
 
-	for err := range errors {
+	for err := range errs {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if err := progressMarker.close(); err != nil {
+		return nil, err
 	}
 
 	return packages, nil

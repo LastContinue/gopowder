@@ -57,6 +57,11 @@ func (m MockEval) getMockPackages() []Package {
 		},
 		{
 			Name:           "PkgC",
+			CurrentVersion: new(" "),
+			Update:         nil,
+		},
+		{
+			Name:           "PkgD",
 			CurrentVersion: new("some_weird_setup"),
 			Update:         nil,
 		},
@@ -83,11 +88,12 @@ func (m MockEval) getPackagePaths(_path string, _configName string) ([]string, e
 func (m MockEval) getPackageFromPath(path string) (*Package, error) {
 	packages := m.getMockPackages()
 	matches := map[string]Package{
-		"/a/good/path":          packages[0],
-		"/a/non-versioned/path": packages[1],
-		"/the/best/path":        packages[2],
-		"/ignore/path":          packages[3],
-		"/override/path":        packages[4],
+		"/a/good/path":                packages[0],
+		"/a/non-versioned/path":       packages[1],
+		"/another/non-versioned/path": packages[2],
+		"/the/best/path":              packages[3],
+		"/ignore/path":                packages[4],
+		"/override/path":              packages[5],
 	}
 
 	// If this doesn't find a match, we got a big problem...
@@ -282,7 +288,7 @@ func TestFlakeSettings_GetPackage(t *testing.T) {
 
 	allPackages := eval.getMockPackages()
 
-	overridePkg := &allPackages[4]
+	overridePkg := &allPackages[5]
 	overridePkg.Name = "PkgOverride (PkgOverridden)"
 
 	tests := []struct {
@@ -300,10 +306,17 @@ func TestFlakeSettings_GetPackage(t *testing.T) {
 			want:     &allPackages[0],
 		},
 		{
-			name:     "Does not return non-versioned",
+			name:     "Does not return package for a nil currentVersion",
 			settings: flakeSettings,
 			wantErr:  false,
 			pkgPath:  "/a/non-versioned/path",
+			want:     nil,
+		},
+		{
+			name:     "Does not return package for an empty string currentVersion",
+			settings: flakeSettings,
+			wantErr:  false,
+			pkgPath:  "/another/non-versioned/path",
 			want:     nil,
 		},
 		{

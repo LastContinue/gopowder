@@ -186,3 +186,46 @@ func TestRunSummary_ToTable(t *testing.T) {
 		})
 	}
 }
+
+func TestPackage_isNonVersioned(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentVersion *string
+		want           bool
+	}{
+		{
+			name: "nil version",
+			want: true,
+		},
+		{
+			name:           "empty version",
+			currentVersion: new(""),
+			want:           true,
+		},
+		{
+			name:           "whitespace only version",
+			currentVersion: new(" \t\n "),
+			want:           true,
+		},
+		{
+			name:           "version with surrounding whitespace",
+			currentVersion: new(" 1.2.3 "),
+			want:           false,
+		},
+		{
+			name:           "version",
+			currentVersion: new("1.2.3"),
+			want:           false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := Package{CurrentVersion: tt.currentVersion}
+
+			if got := p.isNonVersioned(); got != tt.want {
+				t.Errorf("isNonVersioned() = %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
