@@ -1,11 +1,13 @@
 flake_dir = "/path_to_darwin_flake"
 # or ENV var like ${DARWIN_FLAKE}"
 
-flake_config_name = "default"
-# Defaults to (hostname -s) if not set
+# flake_config_name = "default"
+# Defaults to (`scutil --get LocalHostName`) if not set
 
 [pkgs]
 ignore = ["bash-interactive", "texinfo-interactive"]
 
+# I'm not sure what other packages have this, but
+# the format is "Local Name" = "Unstable Name"
 [pkgs.overrides]
-nix = "nixVersions.latest"
+#nix = "nixVersions.latest"

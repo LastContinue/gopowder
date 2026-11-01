@@ -143,7 +143,7 @@ func TestNewFlakeSettings(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	cmd := exec.Command("hostname", "-s")
+	cmd := exec.Command("scutil", "--get", "LocalHostName")
 
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
